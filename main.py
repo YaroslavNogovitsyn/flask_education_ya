@@ -1,6 +1,6 @@
-from flask import Flask, render_template, redirect, request, abort
+from flask import Flask, render_template, redirect, request, abort, make_response, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from data import db_session
+from data import db_session, news_api
 from data.news import News
 from data.users import User
 from forms.login_form import LoginForm
@@ -138,8 +138,20 @@ def news_delete(id):
     return redirect('/')
 
 
+@app.errorhandler(404)
+def not_found(error):
+    print(404)
+    return make_response(jsonify({'error': 'Not found'}), 404)
+
+
+@app.errorhandler(400)
+def bad_request(_):
+    return make_response(jsonify({'error': 'Bad Request'}), 400)
+
+
 def main():
     db_session.global_init("db/blogs.db")
+    app.register_blueprint(news_api.blueprint)
     app.run()
 
 
