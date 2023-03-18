@@ -1,11 +1,14 @@
 from flask import Flask, render_template, redirect, request, abort, make_response, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_restful import Api
+
 from data import db_session, news_api
 from data.news import News
 from data.users import User
 from forms.login_form import LoginForm
 from forms.news_form import NewsForm
 from forms.register_form import RegisterForm
+from restful_api.news_resources import NewsListResource, NewsResource
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'my_secret_key'
@@ -40,7 +43,8 @@ def reqister():
                                    form=form,
                                    message="Пароли не совпадают")
         db_sess = db_session.create_session()
-        if db_sess.query(User).filter(User.email == form.email.data).first():
+        if db_sess.query(User).filter(User.email == form.email.data).first() or \
+                db_sess.query(User).filter(User.name == form.name.data).first():
             return render_template('register.html', title='Регистрация',
                                    form=form,
                                    message="Такой пользователь уже есть")
@@ -140,7 +144,6 @@ def news_delete(id):
 
 @app.errorhandler(404)
 def not_found(error):
-    print(404)
     return make_response(jsonify({'error': 'Not found'}), 404)
 
 
@@ -152,7 +155,14 @@ def bad_request(_):
 def main():
     db_session.global_init("db/blogs.db")
     app.register_blueprint(news_api.blueprint)
-    app.run()
+    api = Api(app)
+    # для списка объектов
+    api.add_resource(NewsListResource, '/api/v2/news')
+
+    # для одного объекта
+    api.add_resource(NewsResource, '/api/v2/news/<int:news_id>')
+
+    app.run(port=5000)
 
 
 if __name__ == '__main__':
